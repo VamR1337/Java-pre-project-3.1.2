@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<h1>Users</h1>
+<div>
+    <ul>
+        <th:block th:each="user : ${user}">
+            <li th:text="${user}"></li>
+        </th:block>
+    </ul>
+</div>
+<form action="/logout" method="get">
+    <button type="submit">logout</button>
+</form>
+</body>
+</html>
