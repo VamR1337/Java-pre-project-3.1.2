@@ -2,9 +2,11 @@ package ru.kata.spring.boot_security.demo.servis;
 
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import ru.kata.spring.boot_security.demo.UsernameAlreadyExistsException;
 import ru.kata.spring.boot_security.demo.model.Role;
 import ru.kata.spring.boot_security.demo.model.User;
 import ru.kata.spring.boot_security.demo.repositories.RoleRepository;
@@ -15,18 +17,22 @@ import java.util.List;
 @Service
 public class UserServiceImpl implements UserService {
 
-    private UserRepository userRepository;
-    private RoleRepository roleRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public UserServiceImpl(UserRepository userRepository, RoleRepository roleRepository) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
     @Override
     public void add(User user) {
+        if (userRepository.existsByUsername(user.getUsername())) {
+            throw new UsernameAlreadyExistsException("Пользователь с таким именем уже существует");
+        }
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
     }
 
@@ -34,18 +40,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public User addRoleToUser(User user, List<Role> roles) {
         user.setRoles(roles);
-        userRepository.save(user);
-        return user;
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    @Override
-    public void saveRole(List<Role> roles) {
-        for (Role role : roles) {
-            if(!roleRepository.existsByName(role.getName())) {
-                roleRepository.save(role);
-            }
-        }
+        return userRepository.save(user);
     }
 
     @Override
@@ -72,8 +67,13 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @Override
     public void update(User user) {
+        if (userRepository.existsByUsernameAndIdNot(user.getUsername(), user.getId())) {
+            throw new UsernameAlreadyExistsException("Пользователь с таким именем уже существует");
+        }
         User existingUser = userRepository.getById(user.getId());
         existingUser.setUsername(user.getUsername());
+        existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
+        existingUser.setRoles(user.getRoles());
         userRepository.save(existingUser);
     }
 }
